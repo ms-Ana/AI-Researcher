@@ -6,8 +6,10 @@ import json
 import os
 from utils import cache_output
 from tqdm import tqdm
-import random 
+import random
+
 random.seed(2024)
+
 
 def overall_score(idea_proposal, openai_client, model):
     prompt = "You are a professor in Natural Language Processing. Your task is to review a project proposal.\n\n"
@@ -27,12 +29,25 @@ def overall_score(idea_proposal, openai_client, model):
     prompt += "Please directly provide a score between 1 and 10 for the project proposal (just a number, nothing else).\n"
 
     prompt_messages = [{"role": "user", "content": prompt}]
-    response, cost = call_api(openai_client, model, prompt_messages, temperature=0., max_tokens=2, json_output=False)
+    response, cost = call_api(
+        openai_client,
+        model,
+        prompt_messages,
+        temperature=0.0,
+        max_tokens=2,
+        json_output=False,
+    )
     return prompt, response, cost
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--engine', type=str, default='claude-3-5-sonnet-20240620', help='api engine; https://openai.com/api/')
+    parser.add_argument(
+        "--engine",
+        type=str,
+        default="claude-3-5-sonnet-20240620",
+        help="api engine; https://openai.com/api/",
+    )
     args = parser.parse_args()
 
     with open("../keys.json", "r") as f:
@@ -41,17 +56,14 @@ if __name__ == "__main__":
     ANTH_KEY = keys["anthropic_key"]
     OAI_KEY = keys["api_key"]
     ORG_ID = keys["organization_id"]
-    
+
     if "claude" in args.engine:
         client = anthropic.Anthropic(
             api_key=ANTH_KEY,
         )
     else:
-        client = OpenAI(
-            organization=ORG_ID,
-            api_key=OAI_KEY
-        )
-    
+        client = OpenAI(organization=ORG_ID, api_key=OAI_KEY)
+
     overall_scores = {}
     for filename in tqdm(os.listdir("../all_ideas/all_ideas")):
         if not filename.endswith(".txt"):
@@ -60,7 +72,7 @@ if __name__ == "__main__":
             proposal = f.read()
         prompt, response, cost = overall_score(proposal, client, args.engine)
         overall_scores[filename] = int(response.strip())
-        print (filename, response, cost)
+        print(filename, response, cost)
 
     with open("../all_ideas/overall_scores_claude_direct.json", "w") as f:
         json.dump(overall_scores, f, indent=4)

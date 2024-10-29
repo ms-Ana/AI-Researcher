@@ -26,22 +26,32 @@ import shutil
 #     print ("cache_name: ", cache_name, ";  total_files: ", total_files)
 
 
-
 ideas_dir = "../cache_results_claude_may/ideas_5k"
-cache_names = ["bias", "coding", "factuality", "math", "multilingual", "safety", "uncertainty"]
+cache_names = [
+    "bias",
+    "coding",
+    "factuality",
+    "math",
+    "multilingual",
+    "safety",
+    "uncertainty",
+]
 
 for cache_name in cache_names:
-    print (cache_name)
+    print(cache_name)
     with open(os.path.join(ideas_dir, cache_name + "_prompting_method.json"), "r") as f:
         no_rag_ideas = json.load(f)
-        print ("#ideas: ", len(no_rag_ideas["ideas"]) * 5)
-    with open(os.path.join(ideas_dir, cache_name + "_prompting_method_RAG.json"), "r") as f:
+        print("#ideas: ", len(no_rag_ideas["ideas"]) * 5)
+    with open(
+        os.path.join(ideas_dir, cache_name + "_prompting_method_RAG.json"), "r"
+    ) as f:
         rag_ideas = json.load(f)
-        print ("#ideas: ", len(rag_ideas["ideas"]) * 5)
-    
+        print("#ideas: ", len(rag_ideas["ideas"]) * 5)
+
     all_ideas = {}
     all_ideas["topic_description"] = rag_ideas["topic_description"]
     all_ideas["ideas"] = no_rag_ideas["ideas"] + rag_ideas["ideas"]
-    with open(os.path.join(ideas_dir, cache_name + "_prompting_method_merged.json"), "w") as f:
+    with open(
+        os.path.join(ideas_dir, cache_name + "_prompting_method_merged.json"), "w"
+    ) as f:
         json.dump(all_ideas, f, indent=4)
-

@@ -3,95 +3,114 @@ import re
 import json
 
 # Define the paper search endpoint URL
-search_url = 'https://api.semanticscholar.org/graph/v1/paper/search/'
-graph_url = 'https://api.semanticscholar.org/graph/v1/paper/'
+search_url = "https://api.semanticscholar.org/graph/v1/paper/search/"
+graph_url = "https://api.semanticscholar.org/graph/v1/paper/"
 rec_url = "https://api.semanticscholar.org/recommendations/v1/papers/forpaper/"
 
 with open("../keys.json", "r") as f:
     keys = json.load(f)
 S2_KEY = keys["s2_key"]
 
+
 def KeywordQuery(keyword):
     ## retrieve papers based on keywords
     query_params = {
-        'query': keyword,
-        'limit': 20,
-        'fields': 'title,year,citationCount,abstract,tldr'
+        "query": keyword,
+        "limit": 20,
+        "fields": "title,year,citationCount,abstract,tldr",
     }
-    headers = {'x-api-key': S2_KEY}
-    response = requests.get(search_url, params=query_params, headers = headers)
-    
+    headers = {"x-api-key": S2_KEY}
+    response = requests.get(search_url, params=query_params, headers=headers)
+
     if response.status_code == 200:
         return response.json()
     else:
         return None
+
 
 def PaperQuery(paper_id):
     ## retrieve similar papers based on paper id
     query_params = {
-        'paperId': paper_id,
-        'limit': 20,
-        'fields': 'title,year,citationCount,abstract'
+        "paperId": paper_id,
+        "limit": 20,
+        "fields": "title,year,citationCount,abstract",
     }
-    headers = {'x-api-key': S2_KEY}
-    response = requests.get(url = rec_url + paper_id, params = query_params, headers = headers)
-    
+    headers = {"x-api-key": S2_KEY}
+    response = requests.get(
+        url=rec_url + paper_id, params=query_params, headers=headers
+    )
+
     if response.status_code == 200:
         return response.json()
     else:
         return None
 
-def PaperDetails(paper_id, fields='title,year,abstract,authors,citationCount,venue,citations,references,tldr'):
+
+def PaperDetails(
+    paper_id,
+    fields="title,year,abstract,authors,citationCount,venue,citations,references,tldr",
+):
     ## get paper details based on paper id
-    paper_data_query_params = {'fields': fields}
-    headers = {'x-api-key': S2_KEY}
-    response = requests.get(url = graph_url + paper_id, params = paper_data_query_params, headers = headers)
+    paper_data_query_params = {"fields": fields}
+    headers = {"x-api-key": S2_KEY}
+    response = requests.get(
+        url=graph_url + paper_id, params=paper_data_query_params, headers=headers
+    )
 
     if response.status_code == 200:
         return response.json()
     else:
         return None
+
 
 def GetAbstract(paper_id):
     ## get the abstract of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return paper_details["abstract"]
     else:
         return None
 
+
 def GetCitationCount(paper_id):
     ## get the citation count of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return int(paper_details["citationCount"])
     else:
         return None
 
+
 def GetCitations(paper_id):
     ## get the citation list of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    
+
     if paper_details is not None:
         return paper_details["citations"]
     else:
         return None
 
+
 def GetReferences(paper_id):
     ## get the reference list of a paper based on paper id
     paper_details = PaperDetails(paper_id)
-    references = paper_details["references"][ : 100]
+    references = paper_details["references"][:100]
 
     ## get details of each reference, keep first 20 to save costs
-    detailed_references = [PaperDetails(ref["paperId"], fields='title,year,abstract,citationCount') for ref in references if ref["paperId"]]
-    detailed_references = paper_filter(detailed_references)[ : 20]
-    
+    detailed_references = [
+        PaperDetails(ref["paperId"], fields="title,year,abstract,citationCount")
+        for ref in references
+        if ref["paperId"]
+    ]
+    detailed_references = paper_filter(detailed_references)[:20]
+
     if paper_details is not None:
         return detailed_references
     else:
         return None
+
 
 def paper_filter(paper_lst):
     ## filter out papers based on some basic heuristics
@@ -99,13 +118,18 @@ def paper_filter(paper_lst):
     for paper in paper_lst:
         abstract = paper["abstract"] if paper["abstract"] else paper["title"]
         # if ("year" in paper.keys()) and (paper["year"] is not None) and (int(paper["year"]) < 2022):
-        #     continue 
+        #     continue
         # if ("citationCount" in paper.keys()) and (paper["citationCount"] is not None) and int(paper["citationCount"]) <= 10:
-        #     continue 
-        if "survey" in abstract.lower() or "review" in abstract.lower() or "position paper" in abstract.lower():
+        #     continue
+        if (
+            "survey" in abstract.lower()
+            or "review" in abstract.lower()
+            or "position paper" in abstract.lower()
+        ):
             continue
         filtered_lst.append(paper)
     return filtered_lst
+
 
 def parse_and_execute(output):
     ## parse gpt4 output and execute corresponding functions
@@ -114,7 +138,7 @@ def parse_and_execute(output):
         keyword = match.group(1) if match else None
         if keyword:
             response = KeywordQuery(keyword)
-            if 'total' in response and response['total'] == 0:
+            if "total" in response and response["total"] == 0:
                 return None
             if response is not None:
                 if "data" in response:
@@ -150,11 +174,14 @@ def parse_and_execute(output):
         paper_id = match.group(1) if match else None
         if paper_id:
             return GetReferences(paper_id)
-    
+
     return None
 
-def format_papers_for_printing(paper_lst, include_abstract=True, include_score=True, include_id=True):
-    ## convert a list of papers to a string for printing or as part of a prompt 
+
+def format_papers_for_printing(
+    paper_lst, include_abstract=True, include_score=True, include_id=True
+):
+    ## convert a list of papers to a string for printing or as part of a prompt
     output_str = ""
     for paper in paper_lst:
         if include_id:
@@ -162,7 +189,12 @@ def format_papers_for_printing(paper_lst, include_abstract=True, include_score=T
         output_str += "title: " + paper["title"].strip() + "\n"
         if include_abstract and "abstract" in paper and paper["abstract"]:
             output_str += "abstract: " + paper["abstract"].strip() + "\n"
-        elif include_abstract and "tldr" in paper and paper["tldr"] and paper["tldr"]["text"]:
+        elif (
+            include_abstract
+            and "tldr" in paper
+            and paper["tldr"]
+            and paper["tldr"]["text"]
+        ):
             output_str += "tldr: " + paper["tldr"]["text"].strip() + "\n"
         if "score" in paper and include_score:
             output_str += "relevance score: " + str(paper["score"]) + "\n"
@@ -170,32 +202,42 @@ def format_papers_for_printing(paper_lst, include_abstract=True, include_score=T
 
     return output_str
 
+
 def print_top_papers_from_paper_bank(paper_bank, top_k=10):
-    data_list = [{'id': id, **info} for id, info in paper_bank.items()]
-    top_papers = sorted(data_list, key=lambda x: x['score'], reverse=True)[ : top_k]
-    print (format_papers_for_printing(top_papers, include_abstract=False))
+    data_list = [{"id": id, **info} for id, info in paper_bank.items()]
+    top_papers = sorted(data_list, key=lambda x: x["score"], reverse=True)[:top_k]
+    print(format_papers_for_printing(top_papers, include_abstract=False))
+
 
 def dedup_paper_bank(sorted_paper_bank):
     idx_to_remove = []
 
     for i in reversed(range(len(sorted_paper_bank))):
         for j in range(i):
-            if sorted_paper_bank[i]["paperId"].strip() == sorted_paper_bank[j]["paperId"].strip():
+            if (
+                sorted_paper_bank[i]["paperId"].strip()
+                == sorted_paper_bank[j]["paperId"].strip()
+            ):
                 idx_to_remove.append(i)
                 break
-            if ''.join(sorted_paper_bank[i]["title"].lower().split()) == ''.join(sorted_paper_bank[j]["title"].lower().split()):
+            if "".join(sorted_paper_bank[i]["title"].lower().split()) == "".join(
+                sorted_paper_bank[j]["title"].lower().split()
+            ):
                 idx_to_remove.append(i)
                 break
             if sorted_paper_bank[i]["abstract"] == sorted_paper_bank[j]["abstract"]:
                 idx_to_remove.append(i)
                 break
-    
-    deduped_paper_bank = [paper for i, paper in enumerate(sorted_paper_bank) if i not in idx_to_remove]
+
+    deduped_paper_bank = [
+        paper for i, paper in enumerate(sorted_paper_bank) if i not in idx_to_remove
+    ]
     return deduped_paper_bank
+
 
 if __name__ == "__main__":
     ## some unit tests
-    print (KeywordQuery("GPT-3"))
+    print(KeywordQuery("GPT-3"))
     # print (PaperDetails("1b6e810ce0afd0dd093f789d2b2742d047e316d5")['tldr'])
     # print (PaperQuery("1b6e810ce0afd0dd093f789d2b2742d047e316d5"))
     # print (GetAbstract("1b6e810ce0afd0dd093f789d2b2742d047e316d5"))
@@ -207,5 +249,3 @@ if __name__ == "__main__":
     # print (parse_and_execute("GetReferences(\"1b6e810ce0afd0dd093f789d2b2742d047e316d5\")"))
     # print (parse_and_execute("PaperQuery(\"b626560f19f815808a289ef5c24a17c57320da70\")"))
     # print (parse_and_execute("KeywordQuery(\"language model bias in storytelling\")"))
-
-    
