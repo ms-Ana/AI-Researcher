@@ -1,10 +1,8 @@
 from openai import OpenAI
 import anthropic
-from utils import call_api
+from ai_researcher.src.utils import call_api
 import argparse
 import json
-import os
-from tqdm import tqdm
 import random
 import retry
 

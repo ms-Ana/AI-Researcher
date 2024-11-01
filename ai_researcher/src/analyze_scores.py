@@ -1,6 +1,4 @@
 import json
-import os
-from utils import avg_score, min_score, max_score
 import numpy as np
 import matplotlib.pyplot as plt
 import random

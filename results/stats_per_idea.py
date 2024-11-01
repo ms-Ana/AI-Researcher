@@ -2,8 +2,6 @@ import json
 import numpy as np
 from scipy import stats
 import pandas as pd
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
 
 # Load data from a JSON file

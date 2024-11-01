@@ -1,9 +1,9 @@
 from openai import OpenAI
-from utils import call_api
+from ai_researcher.src.utils import call_api
 import argparse
 import json
 import os
-from utils import cache_output, format_plan_json
+from ai_researcher.src.utils import cache_output, format_plan_json
 import random
 from tqdm import tqdm
 import retry

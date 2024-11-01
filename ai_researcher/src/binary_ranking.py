@@ -1,14 +1,12 @@
 from openai import OpenAI
 import anthropic
-from utils import call_api
+from ai_researcher.src.utils import call_api
 import argparse
 import json
-import os
-from utils import cache_output, format_plan_json, avg_score
+from ai_researcher.src.utils import format_plan_json
 import random
 from tqdm import tqdm
 import retry
-from collections import defaultdict
 
 random.seed(2024)
 

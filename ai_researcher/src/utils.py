@@ -1,6 +1,7 @@
-import os
 import json
 import random
+import anthropic
+from openai import OpenAI
 
 
 def calc_price(model, usage):
@@ -29,7 +30,7 @@ def call_api(
         if json_output:
             prompt = (
                 prompt_messages[0]["content"]
-                + ' Directly output the JSON dict with no additional text (avoid the presence of newline characters ("\n") and unescaped double quotes within the string so that we can call json.loads() on the output later).'
+                + " Directly output the JSON dict with no additional text. "
             )
             prompt_messages = [{"role": "user", "content": prompt}]
         message = client.messages.create(
@@ -93,39 +94,24 @@ def print_idea_json(filename):
             print(v.strip() + "\n")
 
 
-def format_plan_json(
-    experiment_plan_json, indent_level=0, skip_test_cases=True, skip_fallback=True
-):
-    try:
-        # Check if the input is a string, if so, return it directly
-        if isinstance(experiment_plan_json, str):
-            return experiment_plan_json
-
-        output_str = ""
-        indent = "  " * indent_level
-        for k, v in experiment_plan_json.items():
-            if k == "score":
-                continue
-            if skip_test_cases and k == "Test Case Examples":
-                continue
-            if skip_fallback and k == "Fallback Plan":
-                continue
-            if isinstance(v, (str, int, float)):
-                output_str += f"{indent}{k}: {v}\n"
-            elif isinstance(v, list):
-                output_str += f"{indent}{k}:\n"
-                for item in v:
-                    if isinstance(item, dict):
-                        output_str += format_plan_json(item, indent_level + 1)
-                    else:
-                        output_str += f"{indent}  - {item}\n"
-            elif isinstance(v, dict):
-                output_str += f"{indent}{k}:\n"
-                output_str += format_plan_json(v, indent_level + 1)
-        return output_str
-    except Exception as e:
-        print("Error in formatting experiment plan json: ", e)
-        return ""
+def format_plan_json(experiment_plan_json):
+    output_str = ""
+    for k, v in experiment_plan_json.items():
+        if isinstance(v, str):
+            output_str += k + ": " + v.strip() + "\n\n"
+        else:
+            output_str += k + ": " + "\n"
+            for sub_k, sub_v in v.items():
+                if isinstance(sub_v, str):
+                    output_str += "  - " + sub_k + ": " + sub_v.strip() + "\n"
+                else:
+                    output_str += "  - " + sub_k + ": " + "\n"
+                    for sub_sub_k, sub_sub_v in sub_v.items():
+                        output_str += (
+                            "    - " + sub_sub_k + ": " + sub_sub_v.strip() + "\n"
+                        )
+            output_str += "\n"
+    return output_str
 
 
 def shuffle_dict_and_convert_to_string(input_dict):
@@ -189,30 +175,78 @@ def min_score(scores):
     return min(scores)
 
 
-if __name__ == "__main__":
-    # filename = "/Users/clsi/Desktop/AI-Researcher/cache_results_claude/lit_review/uncertainty_prompting_method.json"
-    # # print_idea_json(filename)
-    # with open(filename, "r") as f:
-    #     ideas = json.load(f)
-    # # print ("Excitement Ranking: ")
-    # # print (ideas["excitement_rationale"])
-    # # print (ideas["excitement_score"])
+def format_experiment_plan_json(
+    experiment_plan_json, indent_level=0, skip_test_cases=True, skip_fallback=True
+):
+    try:
+        # Check if the input is a string, if so, return it directly
+        if isinstance(experiment_plan_json, str):
+            return experiment_plan_json
 
-    # for i in range(10):
-    #     paper = ideas["paper_bank"][i]
-    #     print (i+1)
-    #     print ("Title: " + paper["title"])
-    #     print ("Abstract: " + paper["abstract"])
-    #     print ("\n\n")
+        output_str = ""
+        indent = "  " * indent_level
+        for k, v in experiment_plan_json.items():
+            if k == "score":
+                continue
+            if skip_test_cases and k == "Test Case Examples":
+                continue
+            if skip_fallback and k == "Fallback Plan":
+                continue
+            if isinstance(v, (str, int, float)):
+                output_str += f"{indent}{k}: {v}\n"
+            elif isinstance(v, list):
+                output_str += f"{indent}{k}:\n"
+                for item in v:
+                    if isinstance(item, dict):
+                        output_str += format_plan_json(item, indent_level + 1)
+                    else:
+                        output_str += f"{indent}  - {item}\n"
+            elif isinstance(v, dict):
+                output_str += f"{indent}{k}:\n"
+                output_str += format_plan_json(v, indent_level + 1)
+        return output_str
+    except Exception as e:
+        print("Error in formatting experiment plan json: ", e)
+        return ""
 
-    # with open("/Users/clsi/Desktop/AI-Researcher/openreview_benchmark/paper_0.json", "r") as f:
-    #     paper = json.load(f)
-    # print (concat_reviews(paper))
 
-    with open(
-        "/Users/clsi/Desktop/AI-Researcher/cache_results_claude_may/experiment_plans/factuality_prompting_method_prompting/adaptive_prompting.json",
-        "r",
-    ) as f:
-        paper_json = json.load(f)
+## Load the model being evaluated
+def load_model(model_name):
+    with open("../keys.json", "r") as f:
+        keys = json.load(f)
 
-    print(format_plan_json(paper_json["full_experiment_plan"]))
+    ANTH_KEY = keys["anthropic_key"]
+    OAI_KEY = keys["api_key"]
+    ORG_ID = keys["organization_id"]
+
+    if "claude" in model_name:
+        client = anthropic.Anthropic(
+            api_key=ANTH_KEY,
+        )
+    else:
+        client = OpenAI(organization=ORG_ID, api_key=OAI_KEY)
+
+    return client
+
+
+## Define the metric
+def evaluator(client, model_name, seed, question, gold_label, prediction):
+    ## we use the simple evaluator of asking the LLM to judge whether the prediction is correct given the gold label
+    prompt = "Given the following question and reference answer, determine if the prediction is correct. Just tell me 'yes' or 'no', nothing else is needed.\n\nQuestion: {}\n\nReference Answer: {}\n\nPrediction: {}\n\n".format(
+        question, gold_label, prediction
+    )
+    prompt_messages = [{"role": "user", "content": prompt}]
+    response, _ = call_api(
+        client,
+        model_name,
+        prompt_messages,
+        temperature=0.0,
+        max_tokens=1,
+        seed=seed,
+        json_output=False,
+    )
+    judgment = False
+    if response.strip().lower() == "yes":
+        return True
+
+    return judgment

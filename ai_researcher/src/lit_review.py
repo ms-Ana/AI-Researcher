@@ -1,6 +1,6 @@
 from openai import OpenAI
 import anthropic
-from utils import call_api, format_plan_json
+from ai_researcher.src.utils import call_api, format_plan_json
 import argparse
 import json
 from lit_review_tools import (
@@ -9,7 +9,7 @@ from lit_review_tools import (
     print_top_papers_from_paper_bank,
     dedup_paper_bank,
 )
-from utils import cache_output
+from ai_researcher.src.utils import cache_output
 import os
 import retry
 

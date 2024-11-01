@@ -1,10 +1,9 @@
 from openai import OpenAI
 import anthropic
-from utils import call_api
+from ai_researcher.src.utils import call_api
 import argparse
 import json
 import os
-from utils import cache_output
 from tqdm import tqdm
 import random
 

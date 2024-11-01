@@ -1,6 +1,6 @@
 from openai import OpenAI
 import anthropic
-from utils import call_api, format_plan_json
+from ai_researcher.src.utils import call_api, format_plan_json
 import argparse
 import json
 import os

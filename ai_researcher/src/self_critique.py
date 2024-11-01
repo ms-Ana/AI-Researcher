@@ -1,10 +1,10 @@
 from openai import OpenAI
-from utils import call_api
+from ai_researcher.src.utils import call_api
 import argparse
 import json
 import os
 from lit_review_tools import format_papers_for_printing, parse_and_execute
-from utils import cache_output, format_plan_json
+from ai_researcher.src.utils import cache_output, format_plan_json
 from tqdm import tqdm
 import random
 
@@ -120,7 +120,6 @@ def improve_idea(
     openai_client,
     model,
 ):
-
     prompt = (
         "You are a researcher with expertise in Natural Language Processing. You have written a project proposal on the topic of: "
         + topic_description

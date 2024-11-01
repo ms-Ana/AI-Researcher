@@ -1,7 +1,6 @@
 ## script to combine RAG and no RAG experiment plans
 import os
 import json
-import shutil
 
 # experiment_plan_dir = "../cache_results_claude_may/experiment_plans_5k_dedup"
 # cache_names = ["bias", "coding", "factuality", "math", "multilingual", "safety", "uncertainty"]

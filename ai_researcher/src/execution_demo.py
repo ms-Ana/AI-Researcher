@@ -1,7 +1,6 @@
 import random
 from tqdm import tqdm
-from utils import call_api, load_model
-import random
+from ai_researcher.src.utils import call_api, load_model
 
 random.seed(2024)
 
